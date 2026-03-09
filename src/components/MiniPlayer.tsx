@@ -1,12 +1,14 @@
 import { Play, Pause } from "lucide-react";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation } from "react-router-dom";
 import DisciplineCover, { getDisciplineConfig } from "./DisciplineCover";
 
 export default function MiniPlayer() {
   const { currentTrack, isPlaying, togglePlay, currentTime, duration, setExpanded } = useAudioPlayer();
+  const location = useLocation();
 
-  if (!currentTrack) return null;
+  if (!currentTrack || location.pathname === "/login") return null;
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
   const config = getDisciplineConfig(currentTrack.discipline);

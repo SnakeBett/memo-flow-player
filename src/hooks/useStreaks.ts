@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import * as api from "@/lib/api";
+import { getCachedToken } from "@/lib/auth";
 
 interface StreakData {
   currentStreak: number;
@@ -38,10 +40,22 @@ function loadStreakData(): StreakData {
 
 export function useStreaks() {
   const [data, setData] = useState<StreakData>(loadStreakData);
+  const syncedRef = useRef(false);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
+
+  useEffect(() => {
+    if (getCachedToken() && !syncedRef.current) {
+      syncedRef.current = true;
+      api.fetchStreaks().then((dbStreaks) => {
+        if (dbStreaks.totalDays > 0) {
+          setData(dbStreaks);
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
   const recordStudySession = useCallback(() => {
     setData((prev) => {
@@ -53,13 +67,19 @@ export function useStreaks() {
       const newLongest = Math.max(prev.longestStreak, newStreak);
       const newDates = prev.studyDates.includes(today) ? prev.studyDates : [...prev.studyDates, today];
 
-      return {
+      const updated = {
         currentStreak: newStreak,
         longestStreak: newLongest,
         lastStudyDate: today,
         totalDays: newDates.length,
         studyDates: newDates.slice(-90),
       };
+
+      if (getCachedToken()) {
+        api.updateStreaks(updated).catch(() => {});
+      }
+
+      return updated;
     });
   }, []);
 

@@ -1,12 +1,14 @@
 import {
   Headphones, Zap, Clock, TrendingUp, Award, BarChart3, BookOpen,
-  Settings, RotateCcw, ChevronRight, Target, Download, X,
+  Settings, RotateCcw, ChevronRight, Target, Download, X, LogOut, User,
 } from "lucide-react";
 import StreakCard from "@/components/StreakCard";
 import { useAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useStudyStats } from "@/hooks/useStudyStats";
 import { getPlaylists, tracks } from "@/data/audioData";
 import DisciplineCover, { getDisciplineConfig } from "@/components/DisciplineCover";
+import * as api from "@/lib/api";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,6 +16,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function AccountPage() {
   const { history, completedTracks, getDisciplineProgress } = useAudioPlayer();
+  const { user, signOut } = useAuth();
   const stats = useStudyStats(history, completedTracks);
   const playlists = getPlaylists();
   const navigate = useNavigate();
@@ -39,18 +42,24 @@ export default function AccountPage() {
     toast("Tem certeza?", {
       action: {
         label: "Resetar tudo",
-        onClick: () => {
+        onClick: async () => {
           localStorage.removeItem("proto10x-progress");
           localStorage.removeItem("proto10x-history");
           localStorage.removeItem("proto10x-streaks");
           localStorage.removeItem("proto10x-favorites");
           localStorage.removeItem("proto10x-last-track");
+          try { await api.resetAllData(); } catch { /* offline */ }
           toast.success("Progresso resetado.");
           setTimeout(() => window.location.reload(), 600);
         },
       },
       duration: 5000,
     });
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
   };
 
   const exportData = () => {
@@ -74,9 +83,14 @@ export default function AccountPage() {
     <div className="page-container px-5 pt-14">
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold font-display tracking-tight">Conta</h1>
-          <p className="text-sm text-muted-foreground mt-1">Seu progresso de estudo</p>
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-full bg-card border border-border flex items-center justify-center">
+            <User size={18} className="text-muted-foreground" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold font-display tracking-tight">{user?.name || "Conta"}</h1>
+            <p className="text-xs text-muted-foreground">{user?.email || "Seu progresso"}</p>
+          </div>
         </div>
         <button
           onClick={toggleSettings}
@@ -111,6 +125,13 @@ export default function AccountPage() {
                 <span className="flex-1 text-left">Resetar progresso</span>
                 <ChevronRight size={14} className="opacity-30" />
               </button>
+
+              <div className="border-t border-border/50 pt-2 mt-1">
+                <button onClick={handleSignOut} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-secondary transition-colors text-sm text-muted-foreground active:scale-[0.98]">
+                  <LogOut size={16} />
+                  <span className="flex-1 text-left">Sair da conta</span>
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

@@ -3,6 +3,8 @@ import { Track } from "@/data/audioData";
 import { useListeningProgress } from "@/hooks/useListeningProgress";
 import { useListeningHistory } from "@/hooks/useListeningHistory";
 import { useStreaks } from "@/hooks/useStreaks";
+import { useAuth } from "@/contexts/AuthContext";
+import * as api from "@/lib/api";
 import { toast } from "sonner";
 
 interface AudioPlayerContextType {
@@ -42,6 +44,7 @@ interface AudioPlayerContextType {
 const AudioPlayerContext = createContext<AudioPlayerContextType | null>(null);
 
 export function AudioPlayerProvider({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -66,8 +69,28 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const { history, addEntry, getHistoryWithTracks } = useListeningHistory();
   const { recordStudySession } = useStreaks();
   const progressCheckedRef = useRef<string | null>(null);
-
   const playNextRef = useRef<() => void>(() => {});
+  const syncedRef = useRef(false);
+
+  // Sync favorites from DB on login
+  useEffect(() => {
+    if (isAuthenticated && !syncedRef.current) {
+      syncedRef.current = true;
+      api.fetchFavorites().then((dbFavs) => {
+        if (dbFavs.length > 0) {
+          setFavorites(dbFavs);
+          localStorage.setItem("proto10x-favorites", JSON.stringify(dbFavs));
+        }
+      }).catch(() => {});
+
+      api.fetchSettings().then((s) => {
+        if (s.volume !== undefined) {
+          setVolumeState(s.volume);
+          localStorage.setItem("proto10x-volume", String(s.volume));
+        }
+      }).catch(() => {});
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!audioRef.current) {
@@ -79,17 +102,10 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const onTimeUpdate = () => setCurrentTime(audio.currentTime);
     const onDurationChange = () => setDuration(audio.duration || 0);
     const onEnded = () => {
-      if (isRepeat) {
-        audio.currentTime = 0;
-        audio.play();
-      } else {
-        playNextRef.current();
-      }
+      if (isRepeat) { audio.currentTime = 0; audio.play(); }
+      else playNextRef.current();
     };
-    const onError = () => {
-      toast.error("Erro ao reproduzir áudio. Verifique sua conexão.");
-      setIsPlaying(false);
-    };
+    const onError = () => { toast.error("Erro ao reproduzir áudio."); setIsPlaying(false); };
 
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("durationchange", onDurationChange);
@@ -111,14 +127,16 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     localStorage.setItem("proto10x-volume", String(volume));
     if (audioRef.current) audioRef.current.volume = volume;
-  }, [volume]);
+    if (isAuthenticated) api.updateSettings({ volume }).catch(() => {});
+  }, [volume, isAuthenticated]);
 
   useEffect(() => {
     if (currentTrack) {
       localStorage.setItem("proto10x-last-track", JSON.stringify(currentTrack));
+      if (isAuthenticated) api.updateSettings({ last_track_id: currentTrack.id }).catch(() => {});
       recordStudySession();
     }
-  }, [currentTrack, recordStudySession]);
+  }, [currentTrack, recordStudySession, isAuthenticated]);
 
   useEffect(() => {
     if (currentTrack && duration > 0 && currentTime / duration >= 0.9) {
@@ -133,13 +151,8 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     const audio = audioRef.current;
     if (!audio) return;
     if (currentTrack?.id === track.id) {
-      if (isPlaying) {
-        audio.pause();
-        setIsPlaying(false);
-      } else {
-        audio.play().catch(() => toast.error("Não foi possível reproduzir."));
-        setIsPlaying(true);
-      }
+      if (isPlaying) { audio.pause(); setIsPlaying(false); }
+      else { audio.play().catch(() => toast.error("Não foi possível reproduzir.")); setIsPlaying(true); }
       return;
     }
     audio.src = track.audioUrl;
@@ -155,47 +168,28 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio || !currentTrack) return;
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      audio.play().catch(() => toast.error("Não foi possível reproduzir."));
-      setIsPlaying(true);
-    }
+    if (isPlaying) { audio.pause(); setIsPlaying(false); }
+    else { audio.play().catch(() => toast.error("Não foi possível reproduzir.")); setIsPlaying(true); }
   }, [currentTrack, isPlaying]);
 
-  const seek = useCallback((time: number) => {
-    if (!audioRef.current) return;
-    audioRef.current.currentTime = time;
-    setCurrentTime(time);
-  }, []);
-
-  const skipForward = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = Math.min(audio.currentTime + 15, audio.duration || 0);
-  }, []);
-
-  const skipBackward = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.currentTime = Math.max(audio.currentTime - 15, 0);
-  }, []);
-
-  const setPlaybackRate = useCallback((rate: number) => {
-    if (audioRef.current) audioRef.current.playbackRate = rate;
-    setPlaybackRateState(rate);
-  }, []);
-
+  const seek = useCallback((time: number) => { if (audioRef.current) { audioRef.current.currentTime = time; setCurrentTime(time); } }, []);
+  const skipForward = useCallback(() => { if (audioRef.current) audioRef.current.currentTime = Math.min(audioRef.current.currentTime + 15, audioRef.current.duration || 0); }, []);
+  const skipBackward = useCallback(() => { if (audioRef.current) audioRef.current.currentTime = Math.max(audioRef.current.currentTime - 15, 0); }, []);
+  const setPlaybackRate = useCallback((rate: number) => { if (audioRef.current) audioRef.current.playbackRate = rate; setPlaybackRateState(rate); }, []);
   const toggleRepeat = useCallback(() => setIsRepeat((r) => !r), []);
   const toggleShuffle = useCallback(() => setIsShuffle((s) => !s), []);
   const setVolume = useCallback((v: number) => setVolumeState(v), []);
 
   const toggleFavorite = useCallback((trackId: string) => {
-    setFavorites((prev) =>
-      prev.includes(trackId) ? prev.filter((id) => id !== trackId) : [...prev, trackId]
-    );
-  }, []);
+    setFavorites((prev) => {
+      const removing = prev.includes(trackId);
+      if (isAuthenticated) {
+        if (removing) api.removeFavorite(trackId).catch(() => {});
+        else api.addFavorite(trackId).catch(() => {});
+      }
+      return removing ? prev.filter((id) => id !== trackId) : [...prev, trackId];
+    });
+  }, [isAuthenticated]);
 
   const isFavorite = useCallback((trackId: string) => favorites.includes(trackId), [favorites]);
 
@@ -203,30 +197,20 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (!currentTrack || playlist.length === 0) return;
     const audio = audioRef.current;
     if (!audio) return;
-
     let next: Track;
     if (isShuffle) {
-      const otherTracks = playlist.filter((t) => t.id !== currentTrack.id);
-      next = otherTracks.length > 0
-        ? otherTracks[Math.floor(Math.random() * otherTracks.length)]
-        : playlist[0];
+      const other = playlist.filter((t) => t.id !== currentTrack.id);
+      next = other.length > 0 ? other[Math.floor(Math.random() * other.length)] : playlist[0];
     } else {
       const idx = playlist.findIndex((t) => t.id === currentTrack.id);
       next = playlist[(idx + 1) % playlist.length];
     }
-
-    audio.src = next.audioUrl;
-    audio.playbackRate = playbackRate;
+    audio.src = next.audioUrl; audio.playbackRate = playbackRate;
     audio.play().catch(() => toast.error("Não foi possível reproduzir."));
-    setCurrentTrack(next);
-    setIsPlaying(true);
-    addEntry(next.id);
-    progressCheckedRef.current = null;
+    setCurrentTrack(next); setIsPlaying(true); addEntry(next.id); progressCheckedRef.current = null;
   }, [currentTrack, playlist, playbackRate, isShuffle, addEntry]);
 
-  useEffect(() => {
-    playNextRef.current = playNext;
-  }, [playNext]);
+  useEffect(() => { playNextRef.current = playNext; }, [playNext]);
 
   const playPrevious = useCallback(() => {
     if (!currentTrack || playlist.length === 0) return;
@@ -234,29 +218,19 @@ export function AudioPlayerProvider({ children }: { children: React.ReactNode })
     if (!audio) return;
     const idx = playlist.findIndex((t) => t.id === currentTrack.id);
     const prev = playlist[(idx - 1 + playlist.length) % playlist.length];
-    audio.src = prev.audioUrl;
-    audio.playbackRate = playbackRate;
+    audio.src = prev.audioUrl; audio.playbackRate = playbackRate;
     audio.play().catch(() => toast.error("Não foi possível reproduzir."));
-    setCurrentTrack(prev);
-    setIsPlaying(true);
-    addEntry(prev.id);
-    progressCheckedRef.current = null;
+    setCurrentTrack(prev); setIsPlaying(true); addEntry(prev.id); progressCheckedRef.current = null;
   }, [currentTrack, playlist, playbackRate, addEntry]);
 
   const playAll = useCallback((tracks: Track[]) => {
     if (tracks.length === 0) return;
     const audio = audioRef.current;
     if (!audio) return;
-
     const ordered = isShuffle ? [...tracks].sort(() => Math.random() - 0.5) : tracks;
-    setPlaylist(ordered);
-    audio.src = ordered[0].audioUrl;
-    audio.playbackRate = playbackRate;
+    setPlaylist(ordered); audio.src = ordered[0].audioUrl; audio.playbackRate = playbackRate;
     audio.play().catch(() => toast.error("Não foi possível reproduzir."));
-    setCurrentTrack(ordered[0]);
-    setIsPlaying(true);
-    addEntry(ordered[0].id);
-    progressCheckedRef.current = null;
+    setCurrentTrack(ordered[0]); setIsPlaying(true); addEntry(ordered[0].id); progressCheckedRef.current = null;
   }, [playbackRate, isShuffle, addEntry]);
 
   return (

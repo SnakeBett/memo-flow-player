@@ -216,7 +216,7 @@ export default function AccountPage() {
 
         {/* Footer */}
         <div className="py-8 text-center">
-          <p className="text-[11px] text-muted-foreground/40">Protocolo 10X · v1.0</p>
+          <p className="text-[11px] text-muted-foreground/40">AprovaCast · v1.0</p>
         </div>
       </div>
     </div>

@@ -1,11 +1,11 @@
 {
-  "name": "Protocolo 10X - Memorização",
-  "short_name": "Protocolo 10X",
-  "description": "Memorização acelerada por áudio",
+  "name": "AprovaCast - Memorização por Áudio",
+  "short_name": "AprovaCast",
+  "description": "Memorização acelerada por áudio para concursos",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0e1a",
-  "theme_color": "#0a0e1a",
+  "background_color": "#0f1118",
+  "theme_color": "#0f1118",
   "orientation": "portrait",
   "icons": [
     {

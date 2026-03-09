@@ -33,39 +33,21 @@ function clearSession() {
   localStorage.removeItem("proto10x-user");
 }
 
-export async function signUp(name: string, email: string, password: string): Promise<AuthResponse> {
-  try {
-    const res = await fetch(`${AUTH_URL}/api/auth/sign-up/email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-      credentials: "include",
-    });
-    const data = await res.json();
-    if (!res.ok || data.error) return { error: data.message || data.error || "Erro ao criar conta" };
-    if (data.user && data.token) {
-      storeSession(data.user, data.token);
-      return { user: data.user, token: data.token };
-    }
-    if (data.user) {
-      storeSession(data.user, data.user.id);
-      return { user: data.user, token: data.user.id };
-    }
-    return { error: "Resposta inesperada do servidor" };
-  } catch (e: any) {
-    return { error: e.message || "Erro de conexão" };
-  }
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text();
+  if (!text) return {};
+  try { return JSON.parse(text); } catch { return { error: text }; }
 }
 
 export async function signIn(email: string, password: string): Promise<AuthResponse> {
   try {
-    const res = await fetch(`${AUTH_URL}/api/auth/sign-in/email`, {
+    const res = await fetch(`${AUTH_URL}/sign-in/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
       credentials: "include",
     });
-    const data = await res.json();
+    const data = await safeJson(res);
     if (!res.ok || data.error) return { error: data.message || data.error || "Email ou senha incorretos" };
     if (data.user && data.token) {
       storeSession(data.user, data.token);
@@ -75,15 +57,15 @@ export async function signIn(email: string, password: string): Promise<AuthRespo
       storeSession(data.user, data.user.id);
       return { user: data.user, token: data.user.id };
     }
-    return { error: "Resposta inesperada" };
+    return { error: "Email ou senha incorretos" };
   } catch (e: any) {
-    return { error: e.message || "Erro de conexão" };
+    return { error: "Erro de conexão. Tente novamente." };
   }
 }
 
 export async function signOut() {
   try {
-    await fetch(`${AUTH_URL}/api/auth/sign-out`, { method: "POST", credentials: "include" });
+    await fetch(`${AUTH_URL}/sign-out`, { method: "POST", credentials: "include" });
   } catch { /* ignore */ }
   clearSession();
 }
@@ -96,11 +78,11 @@ export async function getSession(): Promise<{ user: User; token: string } | null
   }
 
   try {
-    const res = await fetch(`${AUTH_URL}/api/auth/get-session`, { credentials: "include" });
+    const res = await fetch(`${AUTH_URL}/get-session`, { credentials: "include" });
     if (!res.ok) return null;
-    const data = await res.json();
+    const data = await safeJson(res);
     if (data.user) {
-      const token = data.session?.token || data.user.id;
+      const token = data.session?.token || data.token || data.user.id;
       storeSession(data.user, token);
       return { user: data.user, token };
     }

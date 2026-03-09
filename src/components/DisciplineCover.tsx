@@ -11,35 +11,35 @@ const disciplineConfig: Record<string, {
   "Direito Penal": {
     icon: Scale,
     color: "text-red-400",
-    bg: "bg-red-500/15",
+    bg: "bg-red-500/20",
     accent: "#f87171",
     gradient: "from-red-500 to-rose-600",
   },
   "Direito Constitucional": {
     icon: BookOpen,
     color: "text-blue-400",
-    bg: "bg-blue-500/15",
+    bg: "bg-blue-500/20",
     accent: "#60a5fa",
     gradient: "from-blue-500 to-cyan-500",
   },
   "Direito Administrativo": {
     icon: Landmark,
     color: "text-amber-400",
-    bg: "bg-amber-500/15",
+    bg: "bg-amber-500/20",
     accent: "#fbbf24",
     gradient: "from-amber-500 to-orange-500",
   },
   "Direito Civil": {
     icon: FileText,
     color: "text-emerald-400",
-    bg: "bg-emerald-500/15",
+    bg: "bg-emerald-500/20",
     accent: "#34d399",
     gradient: "from-emerald-500 to-green-500",
   },
   "Português": {
     icon: PenTool,
     color: "text-violet-400",
-    bg: "bg-violet-500/15",
+    bg: "bg-violet-500/20",
     accent: "#a78bfa",
     gradient: "from-violet-500 to-purple-500",
   },
@@ -48,7 +48,7 @@ const disciplineConfig: Record<string, {
 const defaultConfig = {
   icon: GraduationCap,
   color: "text-zinc-400",
-  bg: "bg-zinc-500/15",
+  bg: "bg-zinc-500/20",
   accent: "#a1a1aa",
   gradient: "from-zinc-500 to-zinc-600",
 };
@@ -85,9 +85,9 @@ export default function DisciplineCover({ discipline, size = "md", className, pl
           style={{
             width: s.ring,
             height: s.ring,
-            border: `1.5px solid transparent`,
+            border: `2px solid transparent`,
             borderTopColor: config.accent,
-            borderRightColor: `${config.accent}44`,
+            borderRightColor: `${config.accent}55`,
           }}
         />
       )}
@@ -97,11 +97,11 @@ export default function DisciplineCover({ discipline, size = "md", className, pl
           "flex items-center justify-center",
           isLarge ? `bg-gradient-to-br ${config.gradient}` : config.bg,
         )}
-        style={isLarge ? {} : { width: size === "sm" ? 44 : 52, height: size === "sm" ? 44 : 52 }}
+        style={!isLarge ? { width: size === "sm" ? 44 : 52, height: size === "sm" ? 44 : 52 } : {}}
       >
         <Icon
           size={s.icon}
-          className={isLarge ? "text-white/90" : config.color}
+          className={isLarge ? "text-white" : config.color}
           strokeWidth={1.5}
         />
       </div>

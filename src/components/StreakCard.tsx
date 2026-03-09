@@ -66,8 +66,8 @@ export default function StreakCard() {
                 studied
                   ? "bg-foreground text-background"
                   : isToday
-                    ? "ring-1 ring-foreground/20 text-foreground"
-                    : "text-muted-foreground/40"
+                    ? "ring-1 ring-foreground/30 text-foreground"
+                    : "bg-secondary/60 text-muted-foreground"
               }`}>
                 {new Date(date + "T12:00:00").getDate()}
               </div>

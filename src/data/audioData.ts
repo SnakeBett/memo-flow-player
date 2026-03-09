@@ -15,7 +15,7 @@ export interface Playlist {
   tracks: Track[];
 }
 
-const BASE_URL = "https://seudominio.com/audios";
+const BASE_URL = "https://aprovacast.com/audios";
 
 export const tracks: Track[] = [
   // Direito Penal

@@ -37,7 +37,7 @@ export default function Home() {
         <div className="flex items-start justify-between">
           <div>
             <p className="text-xs text-muted-foreground mb-1 tracking-wide uppercase">{getGreeting()}</p>
-            <h1 className="text-3xl font-bold font-display tracking-tight">Protocolo 10X</h1>
+            <h1 className="text-3xl font-bold font-display tracking-tight">AprovaCast</h1>
           </div>
           <button
             onClick={() => navigate("/account")}
@@ -93,8 +93,9 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04, duration: 0.25 }}
                 onClick={() => navigate(`/playlist/${pl.id}`)}
-                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border hover:border-muted-foreground/30 transition-all active:scale-[0.98] text-left group"
+                className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card border border-border hover:border-muted-foreground/30 transition-all active:scale-[0.98] text-left group overflow-hidden relative"
               >
+                <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl" style={{ background: config.accent }} />
                 <DisciplineCover discipline={pl.discipline} size="sm" />
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm">{pl.name}</p>

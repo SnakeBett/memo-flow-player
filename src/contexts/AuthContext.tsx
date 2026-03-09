@@ -8,7 +8,6 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<string | null>;
-  signUp: (name: string, email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -39,16 +38,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, []);
 
-  const signUp = useCallback(async (name: string, email: string, password: string): Promise<string | null> => {
-    const result = await authLib.signUp(name, email, password);
-    if (result.error) return result.error;
-    if (result.user) {
-      setUser(result.user);
-      setToken(result.token || result.user.id);
-    }
-    return null;
-  }, []);
-
   const signOut = useCallback(async () => {
     await authLib.signOut();
     setUser(null);
@@ -62,7 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       isAuthenticated: !!user,
       signIn,
-      signUp,
       signOut,
     }}>
       {children}
